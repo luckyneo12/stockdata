@@ -16,6 +16,7 @@ import { mainRouter } from './routes'
 import cors from 'cors';
 
 const app = express()
+app.set('trust proxy', true);
 const port = process.env.PORT || 3000
 const hostUrl = process.env.HOST_URL || `http://localhost:${port}`
 
@@ -67,7 +68,12 @@ app.use(mainRouter)
 app.get('/api-docs', (req, res) => {
   const host = req.get('host');
   const protocol = req.get('x-forwarded-proto') || req.protocol;
-  const currentHostUrl = process.env.HOST_URL || `${protocol}://${host}`;
+  let currentHostUrl = process.env.HOST_URL || `${protocol}://${host}`;
+
+  // If we are in production and it still says localhost, fallback to relative path
+  if (process.env.NODE_ENV === 'production' && currentHostUrl.includes('localhost')) {
+    currentHostUrl = '/';
+  }
 
   const dynamicSpec = JSON.parse(JSON.stringify(openapiSpecification));
   dynamicSpec.servers = [{ url: currentHostUrl }];

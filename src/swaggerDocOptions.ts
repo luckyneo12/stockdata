@@ -10,12 +10,9 @@ export const swaggerDocOptions = {
             "description": "This package will help us to get equity details and historical data" +
                 " from National Stock Exchange of India.",
             "contact": {
-                "email": "asraf.cse@gmail.com"
+                "email": "mobiartlucky@gmail.com"
             },
-            "license": {
-                "name": "MIT",
-                "url": "https://github.com/hi-imcodeman/stock-nse-india/blob/master/LICENSE"
-            }
+
         },
         "servers": [
             {
