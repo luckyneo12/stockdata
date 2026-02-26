@@ -104,7 +104,7 @@ app.get('/api-docs', (req, res) => {
         plugins: [
           SwaggerUIBundle.plugins.DownloadUrl
         ],
-        layout: "StandalonePreset"
+        layout: "BaseLayout"
       });
       window.ui = ui;
     };
