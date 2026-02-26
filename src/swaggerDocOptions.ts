@@ -1,7 +1,6 @@
 import swaggerJsDoc from 'swagger-jsdoc'
+import path from 'path'
 
-const port = process.env.PORT || 3000
-const hostUrl = process.env.HOST_URL || `http://localhost:${port}`
 export const swaggerDocOptions = {
     definition: {
         "openapi": "3.0.0",
@@ -20,7 +19,7 @@ export const swaggerDocOptions = {
         },
         "servers": [
             {
-                "url": hostUrl
+                "url": "/"
             }
         ],
         "tags": [
@@ -50,7 +49,11 @@ export const swaggerDocOptions = {
             },
         ]
     },
-    apis: ['./build/routes.js']
+    // Dynamically point to routes based on environment
+    apis: [
+        path.join(__dirname, './routes.{ts,js}'),
+        path.join(__dirname, './server.{ts,js}')
+    ]
 }
 
 export const openapiSpecification = swaggerJsDoc(swaggerDocOptions);

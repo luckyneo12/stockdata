@@ -64,8 +64,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(mainRouter)
+app.get('/api-docs', (req, res) => {
+  const host = req.get('host');
+  const protocol = req.get('x-forwarded-proto') || req.protocol;
+  const currentHostUrl = process.env.HOST_URL || `${protocol}://${host}`;
+
+  // Clone the spec and update the server URL dynamically
+  const dynamicSpec = JSON.parse(JSON.stringify(openapiSpecification));
+  dynamicSpec.servers = [{ url: currentHostUrl }];
+
+  (swaggerUi.setup(dynamicSpec, {
+    customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui.min.css',
+    customJs: [
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-bundle.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-standalone-preset.js'
+    ]
+  }) as any)(req, res);
+});
 app.use('/api-docs', swaggerUi.serve as any);
-app.use('/api-docs', swaggerUi.setup(openapiSpecification) as any);
 
 const loadedTypeDefs = loadSchemaSync(path.join(__dirname, './**/*.graphql'), { loaders: [new GraphQLFileLoader()] })
 const loadedResolvers = loadFilesSync(path.join(__dirname, './**/*.resolver.{ts,js}'))
