@@ -19,6 +19,16 @@ const app = express()
 const port = process.env.PORT || 3000
 const hostUrl = process.env.HOST_URL || `http://localhost:${port}`
 
+// Production Hardening: Environment Validation
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('WARNING: OPENAI_API_KEY is not set. MCP features will not be available.');
+  }
+  if (!process.env.HOST_URL) {
+    console.warn(`WARNING: HOST_URL is not set. Defaulting to ${hostUrl}. Ensure this matches your public domain.`);
+  }
+}
+
 // CORS Configuration from environment variables
 // CORS_ORIGINS: Comma-separated list of allowed origins
 // CORS_METHODS: Comma-separated list of allowed HTTP methods  
@@ -80,20 +90,45 @@ const server = new ApolloServer({
   plugins: [ApolloServerPluginDrainHttpServer({ httpServer })]
 });
 
-server.start().then(() => {
-  server.applyMiddleware({ app });
-  app.listen(port, () => {
-    console.log(`NseIndia App started in port ${port}`);
-    console.log(`For API docs: ${hostUrl}/api-docs`);
-    console.log(`Open ${hostUrl} in browser.`);
-    console.log(`For graphql: ${hostUrl}${server.graphqlPath}`);
 
-    // Log CORS configuration
-    if (corsOrigins.length > 0) {
-      console.log(`CORS Origins: ${corsOrigins.join(', ')}`);
-    }
-    console.log(`CORS Methods: ${corsMethods.join(', ')}`);
-    console.log(`CORS Headers: ${corsHeaders.join(', ')}`);
-    console.log(`CORS Credentials: ${process.env.CORS_CREDENTIALS !== 'false'}`);
-  })
-})
+// Apollo Server 3 requires async start
+let isApolloStarted = false;
+const startApollo = async () => {
+  if (!isApolloStarted) {
+    await server.start();
+    server.applyMiddleware({ app });
+    isApolloStarted = true;
+  }
+};
+
+// Middleware to ensure Apollo is started before handling any request (for Serverless)
+app.use(async (req, res, next) => {
+  if (req.path === server.graphqlPath) {
+    await startApollo();
+  }
+  next();
+});
+
+// For traditional servers (Hostinger, Local)
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+  startApollo().then(() => {
+    app.listen(port, () => {
+      console.log(`NseIndia App started in port ${port}`);
+      console.log(`For API docs: ${hostUrl}/api-docs`);
+      console.log(`Open ${hostUrl} in browser.`);
+      console.log(`For graphql: ${hostUrl}${server.graphqlPath}`);
+
+      // Log CORS configuration
+      if (corsOrigins.length > 0) {
+        console.log(`CORS Origins: ${corsOrigins.join(', ')}`);
+      }
+      console.log(`CORS Methods: ${corsMethods.join(', ')}`);
+      console.log(`CORS Headers: ${corsHeaders.join(', ')}`);
+      console.log(`CORS Credentials: ${process.env.CORS_CREDENTIALS !== 'false'}`);
+    });
+  }).catch(err => {
+    console.error('Failed to start Apollo Server:', err);
+  });
+}
+
+export default app;

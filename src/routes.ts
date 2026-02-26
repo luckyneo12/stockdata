@@ -7,9 +7,30 @@ import {
 } from './helpers'
 import { mcpClient, MCPClientRequest, MCPClient } from './mcp/client/mcp-client.js'
 
-const mainRouter:Router = Router()
+const mainRouter: Router = Router()
 
 const nseIndia = new NseIndia()
+
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     description: To get application health status
+ *     tags:
+ *       - Base
+ *     produces:
+ *       - application/json
+ *     responses:
+ *       200:
+ *         description: Returns health status
+ */
+mainRouter.get('/health', (_req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        version: '1.3.0'
+    })
+})
 
 
 /**
@@ -27,7 +48,7 @@ const nseIndia = new NseIndia()
  *       400:
  *         description: Returns a JSON error object of API call
  */
- mainRouter.get('/', async (_req, res) => {
+mainRouter.get('/', async (_req, res) => {
     try {
         res.json(await nseIndia.getDataByEndpoint(ApiList.MARKET_STATUS))
     } catch (error) {
@@ -767,48 +788,48 @@ mainRouter.get('/api/equity/historical/:symbol', async (req, res) => {
 mainRouter.get('/api/equity/technicalIndicators/:symbol', async (req, res) => {
     try {
         const { symbol } = req.params
-        const { 
-            period, 
-            smaPeriods, 
-            emaPeriods, 
-            rsiPeriod, 
-            bbPeriod, 
+        const {
+            period,
+            smaPeriods,
+            emaPeriods,
+            rsiPeriod,
+            bbPeriod,
             bbStdDev,
             showOnlyLatest
         } = req.query
 
         // Parse query parameters
         const options: any = {}
-        
+
         if (period) {
             options.period = parseInt(period as string)
         }
-        
+
         if (smaPeriods) {
             options.smaPeriods = (smaPeriods as string).split(',').map(p => parseInt(p.trim()))
         }
-        
+
         if (emaPeriods) {
             options.emaPeriods = (emaPeriods as string).split(',').map(p => parseInt(p.trim()))
         }
-        
+
         if (rsiPeriod) {
             options.rsiPeriod = parseInt(rsiPeriod as string)
         }
-        
+
         if (bbPeriod) {
             options.bbPeriod = parseInt(bbPeriod as string)
         }
-        
+
         if (bbStdDev) {
             options.bbStdDev = parseFloat(bbStdDev as string)
         }
 
         const indicators = await nseIndia.getTechnicalIndicators(symbol, (options.period as number) || 200, options)
-        
+
         // Parse showOnlyLatest flag (default: true)
         const showLatest = showOnlyLatest === undefined || showOnlyLatest === 'true'
-        
+
         // Helper function to round numbers to 2 decimal places
         const roundTo2Decimals = (value: number | null): number | null => {
             return value !== null ? Math.round(value * 100) / 100 : null
@@ -822,21 +843,21 @@ mainRouter.get('/api/equity/technicalIndicators/:symbol', async (req, res) => {
         if (showLatest) {
             // Return only the latest values
             const latestIndicators: any = {}
-            
+
             // Process SMA indicators
             latestIndicators.sma = {}
             Object.keys(indicators.sma).forEach(key => {
                 const values = indicators.sma[key]
                 latestIndicators.sma[key] = values.length > 0 ? roundTo2Decimals(values[values.length - 1]) : null
             })
-            
+
             // Process EMA indicators
             latestIndicators.ema = {}
             Object.keys(indicators.ema).forEach(key => {
                 const values = indicators.ema[key]
                 latestIndicators.ema[key] = values.length > 0 ? roundTo2Decimals(values[values.length - 1]) : null
             })
-            
+
             // Process other indicators
             latestIndicators.rsi = roundTo2Decimals(
                 indicators.rsi.length > 0 ? indicators.rsi[indicators.rsi.length - 1] : null
@@ -849,31 +870,31 @@ mainRouter.get('/api/equity/technicalIndicators/:symbol', async (req, res) => {
                     indicators.macd.signal.length > 0 ? indicators.macd.signal[indicators.macd.signal.length - 1] : null
                 ),
                 histogram: roundTo2Decimals(
-                    indicators.macd.histogram.length > 0 ? 
+                    indicators.macd.histogram.length > 0 ?
                         indicators.macd.histogram[indicators.macd.histogram.length - 1] : null
                 )
             }
             latestIndicators.bollingerBands = {
                 upper: roundTo2Decimals(
-                    indicators.bollingerBands.upper.length > 0 ? 
+                    indicators.bollingerBands.upper.length > 0 ?
                         indicators.bollingerBands.upper[indicators.bollingerBands.upper.length - 1] : null
                 ),
                 middle: roundTo2Decimals(
-                    indicators.bollingerBands.middle.length > 0 ? 
+                    indicators.bollingerBands.middle.length > 0 ?
                         indicators.bollingerBands.middle[indicators.bollingerBands.middle.length - 1] : null
                 ),
                 lower: roundTo2Decimals(
-                    indicators.bollingerBands.lower.length > 0 ? 
+                    indicators.bollingerBands.lower.length > 0 ?
                         indicators.bollingerBands.lower[indicators.bollingerBands.lower.length - 1] : null
                 )
             }
             latestIndicators.stochastic = {
                 k: roundTo2Decimals(
-                    indicators.stochastic.k.length > 0 ? 
+                    indicators.stochastic.k.length > 0 ?
                         indicators.stochastic.k[indicators.stochastic.k.length - 1] : null
                 ),
                 d: roundTo2Decimals(
-                    indicators.stochastic.d.length > 0 ? 
+                    indicators.stochastic.d.length > 0 ?
                         indicators.stochastic.d[indicators.stochastic.d.length - 1] : null
                 )
             }
@@ -907,24 +928,24 @@ mainRouter.get('/api/equity/technicalIndicators/:symbol', async (req, res) => {
             latestIndicators.vwap = roundTo2Decimals(
                 indicators.vwap.length > 0 ? indicators.vwap[indicators.vwap.length - 1] : null
             )
-            
+
             res.json(latestIndicators)
         } else {
             // Return all values with 2 decimal precision
             const roundedIndicators: any = {}
-            
+
             // Process SMA indicators
             roundedIndicators.sma = {}
             Object.keys(indicators.sma).forEach(key => {
                 roundedIndicators.sma[key] = roundArrayTo2Decimals(indicators.sma[key])
             })
-            
+
             // Process EMA indicators
             roundedIndicators.ema = {}
             Object.keys(indicators.ema).forEach(key => {
                 roundedIndicators.ema[key] = roundArrayTo2Decimals(indicators.ema[key])
             })
-            
+
             // Process other indicators
             roundedIndicators.rsi = roundArrayTo2Decimals(indicators.rsi)
             roundedIndicators.macd = {
@@ -951,7 +972,7 @@ mainRouter.get('/api/equity/technicalIndicators/:symbol', async (req, res) => {
             roundedIndicators.momentum = roundArrayTo2Decimals(indicators.momentum)
             roundedIndicators.ad = roundArrayTo2Decimals(indicators.ad)
             roundedIndicators.vwap = roundArrayTo2Decimals(indicators.vwap)
-            
+
             res.json(roundedIndicators)
         }
     } catch (error) {
@@ -1323,23 +1344,23 @@ mainRouter.get('/api/mostActive/:indexSymbol', async (req, res) => {
  */
 mainRouter.post('/api/mcp/query', async (req, res) => {
     try {
-        const { 
-            query, 
-            sessionId: providedSessionId, 
-            userId, 
-            model, 
-            temperature, 
-            max_tokens, 
-            includeContext, 
-            updatePreferences, 
+        const {
+            query,
+            sessionId: providedSessionId,
+            userId,
+            model,
+            temperature,
+            max_tokens,
+            includeContext,
+            updatePreferences,
             useMemory,
             maxIterations,
             enableDebugLogging
         } = req.body as MCPClientRequest
 
         if (!query || typeof query !== 'string') {
-            return res.status(400).json({ 
-                error: 'Query is required and must be a string' 
+            return res.status(400).json({
+                error: 'Query is required and must be a string'
             })
         }
 
@@ -1347,17 +1368,17 @@ mainRouter.post('/api/mcp/query', async (req, res) => {
         const sessionId = providedSessionId || `auto_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
         if (!process.env.OPENAI_API_KEY) {
-            return res.status(500).json({ 
-                error: 'OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.' 
+            return res.status(500).json({
+                error: 'OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.'
             })
         }
 
         // Enable debug logging if requested, or check environment variable
         const shouldEnableDebug = enableDebugLogging || process.env.MCP_DEBUG_LOGGING === 'true'
-        
+
         // Store original debug state to restore later
         const originalDebugState = mcpClient.isDebugLoggingEnabled()
-        
+
         // Temporarily enable debug logging if requested
         if (shouldEnableDebug) {
             mcpClient.setDebugLogging(true)
@@ -1384,8 +1405,8 @@ mainRouter.post('/api/mcp/query', async (req, res) => {
         }
     } catch (error) {
         console.error('MCP Query Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1428,8 +1449,8 @@ mainRouter.get('/api/mcp/tools', async (_req, res) => {
         res.json({ tools })
     } catch (error) {
         console.error('MCP Tools Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1465,7 +1486,7 @@ mainRouter.get('/api/mcp/tools', async (_req, res) => {
 mainRouter.get('/api/mcp/test', async (_req, res) => {
     try {
         if (!process.env.OPENAI_API_KEY) {
-            return res.status(500).json({ 
+            return res.status(500).json({
                 status: 'error',
                 message: 'OpenAI API key not configured',
                 timestamp: new Date().toISOString()
@@ -1473,7 +1494,7 @@ mainRouter.get('/api/mcp/test', async (_req, res) => {
         }
 
         const isConnected = await mcpClient.testConnection()
-        
+
         if (isConnected) {
             res.json({
                 status: 'success',
@@ -1489,7 +1510,7 @@ mainRouter.get('/api/mcp/test', async (_req, res) => {
         }
     } catch (error) {
         console.error('MCP Test Error:', error)
-        res.status(500).json({ 
+        res.status(500).json({
             status: 'error',
             message: error instanceof Error ? error.message : 'Test failed',
             timestamp: new Date().toISOString()
@@ -1539,8 +1560,8 @@ mainRouter.get('/api/mcp/functions', async (_req, res) => {
         res.json({ functions })
     } catch (error) {
         console.error('MCP Functions Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1596,18 +1617,18 @@ mainRouter.get('/api/mcp/session/:sessionId', async (req, res) => {
     try {
         const { sessionId } = req.params
         const sessionInfo = mcpClient.getSessionInfo(sessionId)
-        
+
         if (!sessionInfo) {
-            return res.status(404).json({ 
-                error: 'Session not found' 
+            return res.status(404).json({
+                error: 'Session not found'
             })
         }
 
         res.json(sessionInfo)
     } catch (error) {
         console.error('Get Session Info Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1667,23 +1688,23 @@ mainRouter.get('/api/mcp/session/:sessionId/history', async (req, res) => {
     try {
         const { sessionId } = req.params
         const { maxMessages } = req.query
-        
+
         const history = mcpClient.getConversationHistory(
-            sessionId, 
+            sessionId,
             maxMessages ? parseInt(maxMessages as string) : undefined
         )
-        
+
         if (history.length === 0) {
-            return res.status(404).json({ 
-                error: 'Session not found or no history available' 
+            return res.status(404).json({
+                error: 'Session not found or no history available'
             })
         }
 
         res.json({ messages: history })
     } catch (error) {
         console.error('Get Conversation History Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1750,15 +1771,15 @@ mainRouter.put('/api/mcp/session/:sessionId/preferences', async (req, res) => {
         const preferences = req.body
 
         mcpClient.updateUserPreferences(sessionId, preferences)
-        
-        res.json({ 
+
+        res.json({
             message: 'Preferences updated successfully',
-            sessionId 
+            sessionId
         })
     } catch (error) {
         console.error('Update Preferences Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1786,17 +1807,17 @@ mainRouter.put('/api/mcp/session/:sessionId/preferences', async (req, res) => {
 mainRouter.delete('/api/mcp/session/:sessionId/clear', async (req, res) => {
     try {
         const { sessionId } = req.params
-        
+
         mcpClient.clearSession(sessionId)
-        
-        res.json({ 
+
+        res.json({
             message: 'Session cleared successfully',
-            sessionId 
+            sessionId
         })
     } catch (error) {
         console.error('Clear Session Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1825,18 +1846,18 @@ mainRouter.get('/api/mcp/session/:sessionId/export', async (req, res) => {
     try {
         const { sessionId } = req.params
         const sessionData = mcpClient.exportSessionData(sessionId)
-        
+
         if (!sessionData) {
-            return res.status(404).json({ 
-                error: 'Session not found' 
+            return res.status(404).json({
+                error: 'Session not found'
             })
         }
 
         res.json(sessionData)
     } catch (error) {
         console.error('Export Session Data Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1855,15 +1876,15 @@ mainRouter.get('/api/mcp/session/:sessionId/export', async (req, res) => {
 mainRouter.post('/api/mcp/cleanup', async (_req, res) => {
     try {
         mcpClient.cleanupExpiredSessions()
-        
-        res.json({ 
+
+        res.json({
             message: 'Cleanup completed successfully',
             timestamp: new Date().toISOString()
         })
     } catch (error) {
         console.error('Cleanup Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1913,12 +1934,12 @@ mainRouter.get('/api/mcp/session/:sessionId/context-stats', async (req, res) => 
     try {
         const { sessionId } = req.params
         const stats = await mcpClient.getContextStats(sessionId)
-        
+
         res.json(stats)
     } catch (error) {
         console.error('Get Context Stats Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -1958,21 +1979,21 @@ mainRouter.post('/api/mcp/session/:sessionId/summarize', async (req, res) => {
     try {
         const { sessionId } = req.params
         const summary = await mcpClient.forceContextSummarization(sessionId)
-        
+
         if (!summary) {
-            return res.status(404).json({ 
-                error: 'Session not found' 
+            return res.status(404).json({
+                error: 'Session not found'
             })
         }
 
-        res.json({ 
+        res.json({
             summary,
             message: 'Context summarization completed successfully'
         })
     } catch (error) {
         console.error('Context Summarization Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -2001,8 +2022,8 @@ mainRouter.get('/api/mcp/session/:sessionId/context-window', async (req, res) =>
         res.json(config)
     } catch (error) {
         console.error('Get Context Window Config Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -2051,15 +2072,15 @@ mainRouter.put('/api/mcp/session/:sessionId/context-window', async (req, res) =>
     try {
         const config = req.body
         mcpClient.updateContextWindowConfig(config)
-        
-        res.json({ 
+
+        res.json({
             message: 'Context window configuration updated successfully',
             config: mcpClient.getContextWindowConfig()
         })
     } catch (error) {
         console.error('Update Context Window Config Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -2091,24 +2112,24 @@ mainRouter.put('/api/mcp/session/:sessionId/context-window', async (req, res) =>
 mainRouter.get('/api/mcp/session/:sessionId/summarization/last', async (req, res) => {
     try {
         const { sessionId } = req.params
-        
+
         if (!mcpClient.isMemoryEnabled()) {
             return res.status(500).json({ error: 'Memory manager not enabled' })
         }
 
         const lastSummarization = mcpClient.getLastSummarization(sessionId)
-        
+
         if (!lastSummarization) {
-            return res.status(404).json({ 
-                message: 'No summarization found for this session' 
+            return res.status(404).json({
+                message: 'No summarization found for this session'
             })
         }
 
         res.json(lastSummarization)
     } catch (error) {
         console.error('Get Last Summarization Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -2140,13 +2161,13 @@ mainRouter.get('/api/mcp/session/:sessionId/summarization/history', async (req, 
     try {
         const { sessionId } = req.params
         const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined
-        
+
         if (!mcpClient.isMemoryEnabled()) {
             return res.status(500).json({ error: 'Memory manager not enabled' })
         }
 
         const history = mcpClient.getSummarizationHistory(sessionId, limit)
-        
+
         res.json({
             sessionId,
             count: history.length,
@@ -2154,8 +2175,8 @@ mainRouter.get('/api/mcp/session/:sessionId/summarization/history', async (req, 
         })
     } catch (error) {
         console.error('Get Summarization History Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -2181,24 +2202,24 @@ mainRouter.get('/api/mcp/session/:sessionId/summarization/history', async (req, 
 mainRouter.get('/api/mcp/session/:sessionId/summarization/summary', async (req, res) => {
     try {
         const { sessionId } = req.params
-        
+
         if (!mcpClient.isMemoryEnabled()) {
             return res.status(500).json({ error: 'Memory manager not enabled' })
         }
 
         const summary = mcpClient.getSummarizationSummary(sessionId)
-        
+
         if (!summary) {
-            return res.status(404).json({ 
-                message: 'Session not found' 
+            return res.status(404).json({
+                message: 'Session not found'
             })
         }
 
         res.json(summary)
     } catch (error) {
         console.error('Get Summarization Summary Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
@@ -2224,19 +2245,19 @@ mainRouter.get('/api/mcp/session/:sessionId/summarization/summary', async (req, 
 mainRouter.get('/api/mcp/session/:sessionId/openai-messages', async (req, res) => {
     try {
         const { sessionId } = req.params
-        
+
         if (!mcpClient.isMemoryEnabled()) {
             return res.status(500).json({ error: 'Memory manager not enabled' })
         }
 
         const data = mcpClient.getOpenAIMessages(sessionId)
-        
+
         if (!data) {
             return res.status(404).json({ error: 'Session not found' })
         }
-        
+
         // Format messages as they would be sent to OpenAI
-            const openaiMessages = [
+        const openaiMessages = [
             {
                 role: 'system',
                 content: data.systemPrompt,
@@ -2259,7 +2280,7 @@ mainRouter.get('/api/mcp/session/:sessionId/openai-messages', async (req, res) =
 
         // Calculate statistics
         const summaryMessages = openaiMessages.filter(
-          m => m.metadata && 'is_summary' in m.metadata && m.metadata.is_summary
+            m => m.metadata && 'is_summary' in m.metadata && m.metadata.is_summary
         )
         const stats = {
             total_messages: openaiMessages.length,
@@ -2277,8 +2298,8 @@ mainRouter.get('/api/mcp/session/:sessionId/openai-messages', async (req, res) =
         })
     } catch (error) {
         console.error('Get OpenAI Messages Error:', error)
-        res.status(500).json({ 
-            error: error instanceof Error ? error.message : 'Internal server error' 
+        res.status(500).json({
+            error: error instanceof Error ? error.message : 'Internal server error'
         })
     }
 })
